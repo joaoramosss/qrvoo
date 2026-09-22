@@ -1,0 +1,46 @@
+name: Release (CD)
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/qrvoo
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: producao   # gate de aprovação manual configurável em Settings > Environments
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promover imagem já testada (sem recompilar)
+        run: |
+          VERSAO=${GITHUB_REF_NAME#v}
+          docker pull $IMAGE:${{ github.sha }}
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:$VERSAO
+          docker push $IMAGE:$VERSAO
+
+      - name: Smoke test da versão promovida
+        run: |
+          docker run -d --name qrvoo -p 8000:8000 $IMAGE:${GITHUB_REF_NAME#v}
+          for i in $(seq 1 15); do curl -fs http://localhost:8000/health && exit 0; sleep 2; done
+          exit 1
+
+      - name: Criar GitHub Release com notas automáticas (baseline)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --title "QRVoo $GITHUB_REF_NAME"

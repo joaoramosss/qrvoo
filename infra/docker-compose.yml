@@ -1,0 +1,7 @@
+# Ambiente de homologação local (staging) — mesma imagem publicada no GHCR
+services:
+  qrvoo:
+    image: ghcr.io/${GITHUB_OWNER:-seu-usuario}/qrvoo:${QRVOO_VERSION:-latest}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

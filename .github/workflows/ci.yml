@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/qrvoo
+
+jobs:
+  qualidade:
+    name: Lint, testes e segurança
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt && pip install -e .
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Testes unitários e de integração + cobertura mínima 80%
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=80
+
+      - name: SAST (bandit)
+        run: bandit -r src -ll
+
+      - name: SCA (pip-audit)
+        run: pip-audit -r requirements.txt
+
+  imagem:
+    name: Build, smoke test e publicação da imagem
+    needs: qualidade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build da imagem
+        run: docker build -t $IMAGE:${{ github.sha }} .
+
+      - name: Smoke test (health check)
+        run: |
+          docker run -d --name qrvoo -p 8000:8000 $IMAGE:${{ github.sha }}
+          for i in $(seq 1 15); do curl -fs http://localhost:8000/health && exit 0; sleep 2; done
+          docker logs qrvoo; exit 1
+
+      - name: Login no GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar imagem (sha + latest)
+        if: github.event_name == 'push'
+        run: |
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest

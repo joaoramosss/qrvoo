@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QRVoo — QR Code de passagens aéreas</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
+  h1{margin-bottom:.2rem} .sub{color:#666;margin-top:0}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  label{display:flex;flex-direction:column;font-size:.9rem;gap:.3rem}
+  input,select{padding:.5rem;border:1px solid #bbb;border-radius:6px;font-size:1rem}
+  button{grid-column:span 2;padding:.7rem;border:0;border-radius:6px;background:#0b5cad;color:#fff;font-size:1rem;cursor:pointer}
+  .erro{background:#fde8e8;color:#9b1c1c;padding:.7rem;border-radius:6px}
+  .resultado{text-align:center;margin-top:1.5rem} .resultado img{max-width:280px}
+  .url{word-break:break-all;font-size:.85rem} footer{margin-top:2rem;color:#888;font-size:.8rem}
+</style>
+</head>
+<body>
+<h1>QRVoo</h1>
+<p class="sub">Gere um QR Code que abre a busca de passagens no site escolhido.</p>
+{% if erro %}<p class="erro">{{ erro }}</p>{% endif %}
+<form method="post">
+  <label>Origem (IATA)<input name="origem" maxlength="3" placeholder="GRU" value="{{ form.get('origem','') }}" required></label>
+  <label>Destino (IATA)<input name="destino" maxlength="3" placeholder="LIS" value="{{ form.get('destino','') }}" required></label>
+  <label>Ida<input type="date" name="ida" value="{{ form.get('ida','') }}" required></label>
+  <label>Volta (opcional)<input type="date" name="volta" value="{{ form.get('volta','') }}"></label>
+  <label>Adultos<input type="number" name="adultos" min="1" max="9" value="{{ form.get('adultos','1') }}"></label>
+  <label>Site<select name="site">
+    {% for chave, (nome, _) in sites.items() %}
+    <option value="{{ chave }}" {% if form.get('site')==chave %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select></label>
+  <button type="submit">Gerar QR Code</button>
+</form>
+{% if qr %}
+<div class="resultado">
+  <img src="data:image/png;base64,{{ qr }}" alt="QR Code da busca">
+  <p class="url"><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a></p>
+  <a download="qrcode_voo.png" href="data:image/png;base64,{{ qr }}">Baixar PNG</a>
+</div>
+{% endif %}
+<footer>QRVoo v{{ versao }}</footer>
+</body>
+</html>

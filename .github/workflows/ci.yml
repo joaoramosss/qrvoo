@@ -18,7 +18,7 @@ jobs:
     name: Lint, testes e segurança
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
@@ -45,7 +45,7 @@ jobs:
     needs: qualidade
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build da imagem
         run: docker build -t $IMAGE:${{ github.sha }} .

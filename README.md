@@ -1,4 +1,4 @@
-# QRVoo 
+# QRVoo
 
 Gerador de QR Code que abre direto a busca de passagens aéreas no Skyscanner, Kayak, Momondo ou Google Flights. Você informa origem, destino e datas; o QRVoo monta o link e devolve o QR Code em PNG.
 

@@ -14,7 +14,9 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-    environment: producao   # gate de aprovação manual configurável em Settings > Environments
+    environment:
+      name: production   # revisor obrigatório: joaoramosss (Settings > Environments)
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v7
         with:

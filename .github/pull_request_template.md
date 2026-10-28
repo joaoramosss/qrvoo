@@ -10,3 +10,4 @@
 - [ ] Título segue Conventional Commits
 - [ ] Testes adicionados/atualizados
 - [ ] Pipeline de CI verde
+- [ ] Aprovado pelo par de revisão

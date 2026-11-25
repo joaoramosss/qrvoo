@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
-from qrvoo.links import SITES, BuscaVoo, montar_url
+from qrvoo.links import DURACAO_MAXIMA_DIAS, SITES, BuscaVoo, montar_url
 
 IDA = date(2026, 12, 10)
 VOLTA = date(2026, 12, 20)
@@ -54,3 +54,14 @@ def test_validacoes(args):
 def test_site_invalido():
     with pytest.raises(ValueError):
         montar_url("decolar", BuscaVoo("GRU", "LIS", IDA))
+
+
+def test_viagem_com_duracao_maxima_e_aceita():
+    volta = IDA + timedelta(days=DURACAO_MAXIMA_DIAS)
+    assert BuscaVoo("GRU", "LIS", IDA, volta).volta == volta
+
+
+def test_viagem_acima_da_duracao_maxima_e_recusada():
+    volta = IDA + timedelta(days=DURACAO_MAXIMA_DIAS + 1)
+    with pytest.raises(ValueError, match="mais de 365 dias"):
+        BuscaVoo("GRU", "LIS", IDA, volta)

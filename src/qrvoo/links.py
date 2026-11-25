@@ -8,6 +8,7 @@ from datetime import date
 from urllib.parse import quote
 
 IATA_RE = re.compile(r"^[A-Z]{3}$")
+DURACAO_MAXIMA_DIAS = 365  # sites de busca não vendem trechos com mais de ~1 ano
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,8 @@ class BuscaVoo:
             raise ValueError("Origem e destino não podem ser iguais.")
         if self.volta and self.volta < self.ida:
             raise ValueError("A data de volta não pode ser anterior à de ida.")
+        if self.volta and (self.volta - self.ida).days > DURACAO_MAXIMA_DIAS:
+            raise ValueError(f"A viagem não pode durar mais de {DURACAO_MAXIMA_DIAS} dias.")
         if not 1 <= self.adultos <= 9:
             raise ValueError("Número de adultos deve estar entre 1 e 9.")
         object.__setattr__(self, "origem", origem)

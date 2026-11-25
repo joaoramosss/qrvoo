@@ -39,3 +39,8 @@ def test_endpoint_png(client):
 
 def test_endpoint_png_invalido(client):
     assert client.get("/qr.png?origem=GRU&destino=GRU&ida=2026-12-10").status_code == 400
+
+
+def test_post_viagem_longa_demais_mostra_erro(client):
+    r = client.post("/", data={"origem": "GRU", "destino": "LIS", "ida": "2026-12-10", "volta": "2027-12-11"})
+    assert b"mais de 365 dias" in r.data

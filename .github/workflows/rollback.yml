@@ -1,0 +1,70 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da Release para colocar em produção (ex.: v1.0.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/qrvoo
+
+jobs:
+  rollback:
+    name: Rollback de produção para ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production   # mesmo revisor obrigatório do release.yml
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag }}
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validar que a tag é uma Release (baseline) existente
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Tag inválida: $TAG"; exit 1; }
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null
+
+      - name: Login no GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Recuperar a imagem da baseline (sem recompilar)
+        run: |
+          VERSAO=${TAG#v}
+          SHA=$(git rev-list -n1 "$TAG")
+          docker pull $IMAGE:$VERSAO || { docker pull $IMAGE:$SHA && docker tag $IMAGE:$SHA $IMAGE:$VERSAO; }
+          echo "VERSAO=$VERSAO" >> "$GITHUB_ENV"
+
+      - name: Smoke test da versão restaurada
+        run: |
+          docker run -d --name qrvoo -p 8000:8000 $IMAGE:$VERSAO
+          for i in $(seq 1 15); do curl -fs http://localhost:8000/health && exit 0; sleep 2; done
+          docker logs qrvoo; exit 1
+
+      - name: Apontar produção para a baseline
+        run: |
+          docker tag $IMAGE:$VERSAO $IMAGE:production
+          docker push $IMAGE:production
+
+      - name: Marcar a Release como Latest
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest
+
+      - name: Resumo
+        run: |
+          echo "### Rollback executado" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Versão em produção: \`$TAG\` (commit $(git rev-list -n1 "$TAG" | cut -c1-7))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Disparado por: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
